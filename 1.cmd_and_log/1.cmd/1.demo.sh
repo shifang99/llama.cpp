@@ -4,6 +4,12 @@ docker exec -it my_cuda-12.2.2 /bin/bash
  
 # 查看cuda版本
 nvcc --version
+# 输出信息如下：
+nvcc: NVIDIA (R) Cuda compiler driver
+Copyright (c) 2005-2023 NVIDIA Corporation
+Built on Tue_Aug_15_22:02:13_PDT_2023
+Cuda compilation tools, release 12.2, V12.2.140
+Build cuda_12.2.r12.2/compiler.33191640_0
  
 #下载代码
 git clone https://github.com/ggerganov/llama.cpp.git
