@@ -2714,7 +2714,7 @@ static inline int ggml_up(int n, int m) {
     GGML_ASSERT(((uintptr_t) (ptr))%GGML_MEM_ALIGN == 0)
 
 ////////////////////////////////////////////////////////////////////////////////
-
+// shifangxu：初始化设备相关backend
 struct ggml_context * ggml_init(struct ggml_init_params params) {
     // make this function thread safe
     ggml_critical_section_start();
@@ -5493,7 +5493,7 @@ static struct ggml_tensor * ggml_soft_max_impl(
     float params[] = { scale, max_bias };
     ggml_set_op_params(result, params, sizeof(params));
 
-    result->op   = GGML_OP_SOFT_MAX;
+    result->op   = GGML_OP_SOFT_MAX; // shifangxu：以softmax为例，跟踪cuda调用。
     result->grad = is_node ? ggml_dup_tensor(ctx, result) : NULL;
     result->src[0] = a;
     result->src[1] = mask;
@@ -5521,7 +5521,7 @@ struct ggml_tensor * ggml_soft_max_ext(
         struct ggml_tensor  * pos,
         float                 scale,
         float                 max_bias) {
-    return ggml_soft_max_impl(ctx, a, mask, pos, scale, max_bias, false);
+    return ggml_soft_max_impl(ctx, a, mask, pos, scale, max_bias, false);  // shifangxu：以softmax为例，跟踪cuda调用。
 }
 
 // ggml_soft_max_back

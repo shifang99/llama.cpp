@@ -3033,7 +3033,7 @@ struct llama_model_loader {
 
     std::string arch_name;
     LLM_KV      llm_kv    = LLM_KV(LLM_ARCH_UNKNOWN);
-
+    // shifangxu：从模型文件中读取参数
     llama_model_loader(const std::string & fname, bool use_mmap, bool check_tensors, const struct llama_model_kv_override * param_overrides_p) {
         int trace = 0;
         if (getenv("LLAMA_TRACE")) {
@@ -3067,13 +3067,13 @@ struct llama_model_loader {
         // For subsidiary files, `meta` tensor data offset must not be used,
         // so we build a unified tensors index for weights.
         for (ggml_tensor * cur = ggml_get_first_tensor(ctx); cur; cur = ggml_get_next_tensor(ctx, cur)) {
-            weights.emplace_back(files.back().get(), 0, cur->name, meta, cur);
+            weights.emplace_back(files.back().get(), 0, cur->name, meta, cur);  // shifangxu：从模型文件中读取参数
         }
         uint16_t n_split = 0;
         get_key(llm_kv(LLM_KV_SPLIT_COUNT), n_split, false);
 
         // Load additional GGML contexts
-        if (n_split > 1) {
+        if (n_split > 1) {  // shifangxu：对于当前demo，没有进入到这个if判断。
             uint16_t idx = 0;
             get_key(llm_kv(LLM_KV_SPLIT_NO), idx);
             if (idx != 0) {
@@ -3213,7 +3213,7 @@ struct llama_model_loader {
 
             LLAMA_LOG_INFO("%s: Dumping metadata keys/values. Note: KV overrides do not apply in this output.\n", __func__);
 
-            for (int i = 0; i < n_kv; i++) {
+            for (int i = 0; i < n_kv; i++) {  // shifangxu：读取kv相关的meta信息
                 const char * name           = gguf_get_key(meta, i);
                 const enum gguf_type type   = gguf_get_kv_type(meta, i);
                 const std::string type_name =
@@ -4721,10 +4721,10 @@ static bool llm_load_tensors(
 
     // assign cpu layers
     for (int64_t i = 0; i < i_gpu_start; ++i) {
-        model.buft_layer[i] = llama_default_buffer_type_cpu(true);
+        model.buft_layer[i] = llama_default_buffer_type_cpu(true); // shifangxu：默认所有 layer 都是 cpu layer
     }
 
-    if (split_mode == LLAMA_SPLIT_MODE_LAYER) {
+    if (split_mode == LLAMA_SPLIT_MODE_LAYER) { // shifangxu：默认进入这个分支
         // calculate the split points
         int device_count = llama_get_device_count();
         bool all_zero = tensor_split == nullptr || std::all_of(tensor_split, tensor_split + device_count, [](float x) { return x == 0.0f; });
@@ -4750,7 +4750,7 @@ static bool llm_load_tensors(
 
         // assign the repeating layers to the devices according to the splits
         int act_gpu_layers = std::min(n_gpu_layers, (int)n_layer + 1);
-        for (int64_t i = i_gpu_start; i < n_layer; ++i) {
+        for (int64_t i = i_gpu_start; i < n_layer; ++i) {  // shifangxu，将各个 gpu layer 分配到不同的 gpu device。这里还没有真正生成tensor。
             int layer_gpu = std::upper_bound(splits.begin(), splits.begin() + device_count, float(i - i_gpu_start)/act_gpu_layers) - splits.begin();
             model.buft_layer[i] = llama_default_buffer_type_offload(layer_gpu);
         }
@@ -4868,12 +4868,12 @@ static bool llm_load_tensors(
                         }
                     }
 
-                    for (int i = 0; i < n_layer; ++i) {
+                    for (int i = 0; i < n_layer; ++i) {  // shifangxu：为每一层的 weight 创建tensor
                         ggml_context * ctx_layer = ctx_for_layer(i);
                         ggml_context * ctx_split = ctx_for_layer_split(i);
 
                         auto & layer = model.layers[i];
-
+                        // shifangxu：create_tensor 最终会调用到 ggml.c 和 ggml-alloc.c 中的方法，为 tensor 申请存储空间。
                         layer.attn_norm = ml.create_tensor(ctx_layer, tn(LLM_TENSOR_ATTN_NORM, "weight", i), {n_embd});
 
                         layer.wq = ml.create_tensor(ctx_split, tn(LLM_TENSOR_ATTN_Q,   "weight", i), {n_embd, n_embd});
@@ -6081,7 +6081,7 @@ static bool llm_load_tensors(
 
 // Returns 0 on success, -1 on error, and -2 on cancellation via llama_progress_callback
 static int llama_model_load(const std::string & fname, llama_model & model, llama_model_params & params) {
-    try {
+    try { // shifangxu：在初始化 struct llama_model_loader 的时候，到 fname 文件中读取 weights 数据。
         llama_model_loader ml(fname, params.use_mmap, params.check_tensors, params.kv_overrides);
 
         model.hparams.vocab_only = params.vocab_only;
@@ -6139,7 +6139,7 @@ static int llama_model_load(const std::string & fname, llama_model & model, llam
             ggml_backend_sycl_set_mul_device_mode();
         }
 #endif
-
+        // shifangxu：将 ml 中的 weights 数据 load 到 tensor。会根据 ngl 参数，选择使用 cpu tensor 还是 gpu tensor。
         if (!llm_load_tensors(
             ml, model, params.n_gpu_layers, params.split_mode,  params.main_gpu, params.tensor_split, params.use_mlock,
             params.progress_callback, params.progress_callback_user_data
@@ -6576,7 +6576,7 @@ static struct ggml_tensor * llm_build_kqv(
 #endif
         {
             kq = ggml_soft_max_ext(ctx, kq, kq_mask, kq_pos, kq_scale, hparams.f_max_alibi_bias);
-            cb(kq, "kq_soft_max_ext", il);
+            cb(kq, "kq_soft_max_ext", il);   // shifangxu：以softmax为例，跟踪cuda调用。
         }
 
         GGML_ASSERT(kv.size == n_ctx);
@@ -15302,7 +15302,7 @@ bool llama_supports_gpu_offload(void) {
 }
 
 void llama_backend_init(void) {
-    ggml_time_init();
+    ggml_time_init();  // shifangxu：初始化计时模块
 
     // needed to initialize f16 tables
     {

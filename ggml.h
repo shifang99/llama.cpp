@@ -456,7 +456,7 @@ extern "C" {
         GGML_OP_DIAG,
         GGML_OP_DIAG_MASK_INF,
         GGML_OP_DIAG_MASK_ZERO,
-        GGML_OP_SOFT_MAX,
+        GGML_OP_SOFT_MAX,  // shifangxu：以softmax为例，跟踪cuda调用。
         GGML_OP_SOFT_MAX_BACK,
         GGML_OP_ROPE,
         GGML_OP_ROPE_BACK,

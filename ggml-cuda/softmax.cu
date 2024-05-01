@@ -9,7 +9,7 @@ template <>
 __device__ float __forceinline__ t2f32<half>(half val) {
     return __half2float(val);
 }
-
+// shifangxu：以softmax为例，跟踪cuda调用。
 template <bool vals_smem, int ncols_template, int block_size_template, typename T>
 static __global__ void soft_max_f32(const float * x, const T * mask, const T * pos, float * dst, const int ncols_par, const int nrows_y, const float scale, const float max_bias, const float m0, const float m1, uint32_t n_head_log2) {
     const int ncols = ncols_template == 0 ? ncols_par : ncols_template;
@@ -123,7 +123,7 @@ static __global__ void soft_max_f32(const float * x, const T * mask, const T * p
         dst[idst] = vals[col] * inv_sum;
     }
 }
-
+// shifangxu：以softmax为例，跟踪cuda调用。
 template<typename T>
 static void soft_max_f32_cuda(const float * x, const T * mask, const T * pos, float * dst, const int ncols_x, const int nrows_x, const int nrows_y, const float scale, const float max_bias, cudaStream_t stream) {
     int nth = WARP_SIZE;
@@ -175,7 +175,7 @@ static void soft_max_f32_cuda(const float * x, const T * mask, const T * pos, fl
     }
 }
 
-void ggml_cuda_op_soft_max(ggml_backend_cuda_context & ctx, ggml_tensor * dst) {
+void ggml_cuda_op_soft_max(ggml_backend_cuda_context & ctx, ggml_tensor * dst) {  // shifangxu：以softmax为例，跟踪cuda调用。
     const ggml_tensor * src0 = dst->src[0];
     const ggml_tensor * src1 = dst->src[1];
     const ggml_tensor * src2 = dst->src[2];

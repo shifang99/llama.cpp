@@ -2272,7 +2272,7 @@ static bool ggml_cuda_compute_forward(ggml_backend_cuda_context & ctx, struct gg
             ggml_cuda_op_diag_mask_inf(ctx, dst);
             break;
         case GGML_OP_SOFT_MAX:
-            ggml_cuda_op_soft_max(ctx, dst);
+            ggml_cuda_op_soft_max(ctx, dst);  // shifangxu：以softmax为例，跟踪cuda调用。
             break;
         case GGML_OP_ROPE:
             ggml_cuda_op_rope(ctx, dst);
@@ -2555,7 +2555,7 @@ GGML_CALL static bool ggml_backend_cuda_supports_op(ggml_backend_t backend, cons
         case GGML_OP_CLAMP:
         case GGML_OP_CONT:
         case GGML_OP_DIAG_MASK_INF:
-        case GGML_OP_SOFT_MAX:
+        case GGML_OP_SOFT_MAX:  // shifangxu：以softmax为例，跟踪cuda调用。
         case GGML_OP_ROPE:
         case GGML_OP_ALIBI:
         case GGML_OP_IM2COL:

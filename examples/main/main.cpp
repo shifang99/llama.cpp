@@ -116,11 +116,11 @@ static void llama_log_callback_logTee(ggml_log_level level, const char * text, v
     (void) user_data;
     LOG_TEE("%s", text);
 }
-
+// shifangxu：llama.cpp程序主入口
 int main(int argc, char ** argv) {
     gpt_params params;
     g_params = &params;
-
+    // shifangxu：解析命令行输入参数
     if (!gpt_params_parse(argc, argv, params)) {
         return 1;
     }
@@ -185,7 +185,7 @@ int main(int argc, char ** argv) {
     }
 
     LOG("%s: llama backend init\n", __func__);
-    llama_backend_init();
+    llama_backend_init(); // shifangxu：初始化设备相关backend
     llama_numa_init(params.numa);
 
     llama_model * model;
@@ -196,10 +196,10 @@ int main(int argc, char ** argv) {
 
     // load the model and apply lora adapter, if any
     LOG("%s: load the model and apply lora adapter, if any\n", __func__);
-    std::tie(model, ctx) = llama_init_from_gpt_params(params);
+    std::tie(model, ctx) = llama_init_from_gpt_params(params); // shifangxu：warming up the model with an empty run。在这个过程中从模型文件读取weight。
     if (sparams.cfg_scale > 1.f) {
         struct llama_context_params lparams = llama_context_params_from_gpt_params(params);
-        ctx_guidance = llama_new_context_with_model(model, lparams);
+        ctx_guidance = llama_new_context_with_model(model, lparams);  // shifangxu：生成 graph nodes
     }
 
     if (model == NULL) {
@@ -255,7 +255,7 @@ int main(int argc, char ** argv) {
         if (params.chatml) {
             params.prompt = "<|im_start|>system\n" + params.prompt + "<|im_end|>";
         }
-        embd_inp = ::llama_tokenize(ctx, params.prompt, true, true);
+        embd_inp = ::llama_tokenize(ctx, params.prompt, true, true);  // shifangxu：prefill 阶段，将 prompt 输入到模型进行一次推理。
     } else {
         LOG("use session tokens\n");
         embd_inp = session_tokens;
@@ -521,7 +521,7 @@ int main(int argc, char ** argv) {
 
     struct llama_sampling_context * ctx_sampling = llama_sampling_init(sparams);
 
-    while ((n_remain != 0 && !is_antiprompt) || params.interactive) {
+    while ((n_remain != 0 && !is_antiprompt) || params.interactive) {  // shifangxu：decode 阶段，循环生成下一个token
         // predict
         if (!embd.empty()) {
             // Note: (n_ctx - 4) here is to match the logic for commandline prompt handling via
@@ -665,7 +665,7 @@ int main(int argc, char ** argv) {
                 }
 
                 LOG("eval: %s\n", LOG_TOKENS_TOSTR_PRETTY(ctx, embd).c_str());
-
+                // shifangxu：为生成下一个token进行一次推理
                 if (llama_decode(ctx, llama_batch_get_one(&embd[i], n_eval, n_past, 0))) {
                     LOG_TEE("%s : failed to eval\n", __func__);
                     return 1;
@@ -733,7 +733,7 @@ int main(int argc, char ** argv) {
         // display text
         if (input_echo && display) {
             for (auto id : embd) {
-                const std::string token_str = llama_token_to_piece(ctx, id);
+                const std::string token_str = llama_token_to_piece(ctx, id);  // shifangxu：将token转化成字符
                 printf("%s", token_str.c_str());
 
                 if (embd.size() > 1) {
@@ -743,7 +743,7 @@ int main(int argc, char ** argv) {
                     output_ss << token_str;
                 }
             }
-            fflush(stdout);
+            fflush(stdout); // shifangxu：往标准终端输出刚刚生成的字符
         }
         // reset color to default if there is no pending user input
         if (input_echo && (int) embd_inp.size() == n_consumed) {
