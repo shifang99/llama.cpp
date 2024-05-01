@@ -38,6 +38,9 @@ drwxrwxr-x 4 1011 1012        4096 Apr 30 11:28 ../
 -rw-r--r-- 1 1011 1012         766 Apr 30 11:29 tokenizer_config.json
  
 # 将模型转为GGUF的FP16格式
+apt-get install pip
+pip3 install  numpy
+pip3 install  sentencepiece
 python3 convert.py models/chinese-llama-2-7b/  --outfile ./models/chinese-llama-2-7b/ggml-model-f16.gguf
  
 # 使用fp16格式在cpu上进行推理
